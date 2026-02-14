@@ -1,4 +1,4 @@
-# Create a GitHub Action Using TypeScript
+# Open Issue Tracker GitHub Action
 
 ![Linter](https://github.com/actions/typescript-action/actions/workflows/linter.yml/badge.svg)
 ![CI](https://github.com/actions/typescript-action/actions/workflows/ci.yml/badge.svg)
@@ -6,32 +6,116 @@
 ![CodeQL](https://github.com/actions/typescript-action/actions/workflows/codeql-analysis.yml/badge.svg)
 ![Coverage](./badges/coverage.svg)
 
-Use this template to bootstrap the creation of a TypeScript action. :rocket:
+A GitHub Action that tracks and reports on open issues in a repository. This
+action fetches all open issues from a specified repository and provides a
+summary with the total count and details of recent issues.
 
-This template includes compilation support, tests, a validation workflow,
-publishing, and versioning guidance.
+## Features
 
-If you are new, there's also a simpler introduction in the
-[Hello world JavaScript action repository](https://github.com/actions/hello-world-javascript-action).
+- Fetches all open issues from a GitHub repository
+- Filters out pull requests to show only actual issues
+- Provides detailed summary with issue count and titles
+- Can track issues in the current repository or any specified repository
+- Outputs results for use in subsequent workflow steps
 
-## Create Your Own Action
+## Usage
 
-To create your own action, you can use this repository as a template! Just
-follow the below instructions:
+### Basic Usage (Current Repository)
 
-1. Click the **Use this template** button at the top of the repository
-1. Select **Create a new repository**
-1. Select an owner and name for your new repository
-1. Click **Create repository**
-1. Clone your new repository
+Track open issues in the current repository:
 
-> [!IMPORTANT]
->
-> Make sure to remove or update the [`CODEOWNERS`](./CODEOWNERS) file! For
-> details on how to use this file, see
-> [About code owners](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners).
+```yaml
+steps:
+  - name: Track Open Issues
+    uses: ./
+    with:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+```
 
-## Initial Setup
+### Track Issues in a Different Repository
+
+Track open issues in a specific repository:
+
+```yaml
+steps:
+  - name: Track Open Issues
+    uses: ./
+    with:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+      owner: octocat
+      repo: hello-world
+```
+
+### Use Outputs in Subsequent Steps
+
+Access the issue count and summary in subsequent steps:
+
+```yaml
+steps:
+  - name: Track Open Issues
+    id: track-issues
+    uses: ./
+    with:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  - name: Display Issue Count
+    run:
+      echo "There are ${{ steps.track-issues.outputs.issue-count }} open issues"
+
+  - name: Display Issue Summary
+    run: echo "${{ steps.track-issues.outputs.issue-summary }}"
+```
+
+## Inputs
+
+| Input          | Required | Default                  | Description                                                     |
+| -------------- | -------- | ------------------------ | --------------------------------------------------------------- |
+| `github-token` | Yes      | N/A                      | GitHub token for API access (use `${{ secrets.GITHUB_TOKEN }}`) |
+| `owner`        | No       | Current repository owner | Repository owner (organization or username)                     |
+| `repo`         | No       | Current repository name  | Repository name                                                 |
+
+## Outputs
+
+| Output          | Description                                          |
+| --------------- | ---------------------------------------------------- |
+| `issue-count`   | Total count of open issues (excluding pull requests) |
+| `issue-summary` | Markdown-formatted summary of open issues            |
+
+## Example Workflow
+
+Here's a complete example workflow that runs on a schedule to track issues:
+
+```yaml
+name: Track Open Issues
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  track-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Track Open Issues
+        id: track
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment on Issue Count
+        if: steps.track.outputs.issue-count > 10
+        run: |
+          echo "Warning: High number of open issues!"
+          echo "Count: ${{ steps.track.outputs.issue-count }}"
+```
+
+## Development
+
+### Initial Setup
 
 After you've cloned the repository to your local machine or codespace, you'll
 need to perform some initial setup steps before you can develop your action.
@@ -62,62 +146,14 @@ need to perform some initial setup steps before you can develop your action.
 1. :white_check_mark: Run the tests
 
    ```bash
-   $ npm test
-
-   PASS  ./index.test.js
-     ✓ throws invalid number (3ms)
-     ✓ wait 500 ms (504ms)
-     ✓ test runs (95ms)
-
-   ...
+   npm test
    ```
 
-## Update the Action Metadata
+### Building and Testing
 
-The [`action.yml`](action.yml) file defines metadata about your action, such as
-input(s) and output(s). For details about this file, see
-[Metadata syntax for GitHub Actions](https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions).
+The action code is written in TypeScript and needs to be bundled into JavaScript
+for distribution.
 
-When you copy this repository, update `action.yml` with the name, description,
-inputs, and outputs for your action.
-
-## Update the Action Code
-
-The [`src/`](./src/) directory is the heart of your action! This contains the
-source code that will be run when your action is invoked. You can replace the
-contents of this directory with your own code.
-
-There are a few things to keep in mind when writing your action code:
-
-- Most GitHub Actions toolkit and CI/CD operations are processed asynchronously.
-  In `main.ts`, you will see that the action is run in an `async` function.
-
-  ```javascript
-  import * as core from '@actions/core'
-  //...
-
-  async function run() {
-    try {
-      //...
-    } catch (error) {
-      core.setFailed(error.message)
-    }
-  }
-  ```
-
-  For more information about the GitHub Actions toolkit, see the
-  [documentation](https://github.com/actions/toolkit/blob/main/README.md).
-
-So, what are you waiting for? Go ahead and start customizing your action!
-
-1. Create a new branch
-
-   ```bash
-   git checkout -b releases/v1
-   ```
-
-1. Replace the contents of `src/` with your action code
-1. Add tests to `__tests__/` for your source code
 1. Format, test, and build the action
 
    ```bash
@@ -129,7 +165,7 @@ So, what are you waiting for? Go ahead and start customizing your action!
    > you do not run this step, your action will not work correctly when it is
    > used in a workflow.
 
-1. (Optional) Test your action locally
+2. (Optional) Test your action locally
 
    The [`@github/local-action`](https://github.com/github/local-action) utility
    can be used to test your action locally. It is a simple command-line tool
@@ -156,27 +192,9 @@ So, what are you waiting for? Go ahead and start customizing your action!
    file, [`.env.example`](./.env.example), and the
    [GitHub Actions Documentation](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).
 
-1. Commit your changes
+## Contributing
 
-   ```bash
-   git add .
-   git commit -m "My first action is ready!"
-   ```
-
-1. Push them to your repository
-
-   ```bash
-   git push -u origin releases/v1
-   ```
-
-1. Create a pull request and get feedback on your action
-1. Merge the pull request into the `main` branch
-
-Your action is now published! :rocket:
-
-For information about versioning your action, see
-[Versioning](https://github.com/actions/toolkit/blob/main/docs/action-versioning.md)
-in the GitHub Actions toolkit.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Validate the Action
 
@@ -194,112 +212,17 @@ steps:
     id: test-action
     uses: ./
     with:
-      milliseconds: 1000
+      github-token: ${{ secrets.GITHUB_TOKEN }}
 
-  - name: Print Output
+  - name: Print Issue Count
     id: output
-    run: echo "${{ steps.test-action.outputs.time }}"
+    run: echo "Open Issues: ${{ steps.test-action.outputs.issue-count }}"
 ```
 
 For example workflow runs, check out the
 [Actions tab](https://github.com/actions/typescript-action/actions)! :rocket:
 
-## Usage
+## License
 
-After testing, you can create version tag(s) that developers can use to
-reference different stable versions of your action. For more information, see
-[Versioning](https://github.com/actions/toolkit/blob/main/docs/action-versioning.md)
-in the GitHub Actions toolkit.
-
-To include the action in a workflow in another repository, you can use the
-`uses` syntax with the `@` symbol to reference a specific branch, tag, or commit
-hash.
-
-```yaml
-steps:
-  - name: Checkout
-    id: checkout
-    uses: actions/checkout@v4
-
-  - name: Test Local Action
-    id: test-action
-    uses: actions/typescript-action@v1 # Commit with the `v1` tag
-    with:
-      milliseconds: 1000
-
-  - name: Print Output
-    id: output
-    run: echo "${{ steps.test-action.outputs.time }}"
-```
-
-## Publishing a New Release
-
-This project includes a helper script, [`script/release`](./script/release)
-designed to streamline the process of tagging and pushing new releases for
-GitHub Actions.
-
-GitHub Actions allows users to select a specific version of the action to use,
-based on release tags. This script simplifies this process by performing the
-following steps:
-
-1. **Retrieving the latest release tag:** The script starts by fetching the most
-   recent SemVer release tag of the current branch, by looking at the local data
-   available in your repository.
-1. **Prompting for a new release tag:** The user is then prompted to enter a new
-   release tag. To assist with this, the script displays the tag retrieved in
-   the previous step, and validates the format of the inputted tag (vX.X.X). The
-   user is also reminded to update the version field in package.json.
-1. **Tagging the new release:** The script then tags a new release and syncs the
-   separate major tag (e.g. v1, v2) with the new release tag (e.g. v1.0.0,
-   v2.1.2). When the user is creating a new major release, the script
-   auto-detects this and creates a `releases/v#` branch for the previous major
-   version.
-1. **Pushing changes to remote:** Finally, the script pushes the necessary
-   commits, tags and branches to the remote repository. From here, you will need
-   to create a new release in GitHub so users can easily reference the new tags
-   in their workflows.
-
-## Dependency License Management
-
-This template includes a GitHub Actions workflow,
-[`licensed.yml`](./.github/workflows/licensed.yml), that uses
-[Licensed](https://github.com/licensee/licensed) to check for dependencies with
-missing or non-compliant licenses. This workflow is initially disabled. To
-enable the workflow, follow the below steps.
-
-1. Open [`licensed.yml`](./.github/workflows/licensed.yml)
-1. Uncomment the following lines:
-
-   ```yaml
-   # pull_request:
-   #   branches:
-   #     - main
-   # push:
-   #   branches:
-   #     - main
-   ```
-
-1. Save and commit the changes
-
-Once complete, this workflow will run any time a pull request is created or
-changes pushed directly to `main`. If the workflow detects any dependencies with
-missing or non-compliant licenses, it will fail the workflow and provide details
-on the issue(s) found.
-
-### Updating Licenses
-
-Whenever you install or update dependencies, you can use the Licensed CLI to
-update the licenses database. To install Licensed, see the project's
-[Readme](https://github.com/licensee/licensed?tab=readme-ov-file#installation).
-
-To update the cached licenses, run the following command:
-
-```bash
-licensed cache
-```
-
-To check the status of cached licenses, run the following command:
-
-```bash
-licensed status
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
+for details.

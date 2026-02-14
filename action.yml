@@ -1,23 +1,30 @@
-name: The name of your action here
-description: Provide a description here
-author: Your name or organization here
+name: Open Issue Tracker
+description: Track and report on open issues in a GitHub repository
+author: GitHub Actions
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: heart
-  color: red
+  icon: alert-circle
+  color: orange
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: Your input description here
+  github-token:
+    description: GitHub token for API access
     required: true
-    default: '1000'
+  owner:
+    description: Repository owner (organization or username)
+    required: false
+  repo:
+    description: Repository name
+    required: false
 
 # Define your outputs here.
 outputs:
-  time:
-    description: Your output description here
+  issue-count:
+    description: Total count of open issues
+  issue-summary:
+    description: Summary of open issues
 
 runs:
   using: node24
